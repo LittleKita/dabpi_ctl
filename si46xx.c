@@ -581,6 +581,56 @@ static void store_image(const uint8_t *data, uint32_t len, uint8_t wait_for_int)
 	msleep(4); // wait 4ms (datasheet)
 }
 
+
+static FILE *find_file_name(char *filename) {
+	const int path_len = 1024*64;
+	int len;
+	char find_file_name_path[path_len];
+	FILE *fp;
+
+	if((fp = fopen(filename, "rb")) != 0) {
+		printf("using(d) %s\r\n", filename);
+		return fp;
+	}
+	len = readlink("/proc/self/exe", find_file_name_path, path_len-1);
+	if(len > 0) {
+		find_file_name_path[len] = '\0';
+		sprintf(find_file_name_path, "%s/%s", dirname(find_file_name_path), filename);
+		if((fp = fopen(find_file_name_path, "rb")) != 0) {
+			printf("using(s) %s\r\n", find_file_name_path);
+			return fp;
+		}
+	}
+
+        char *path = getenv("PATH");
+
+        char *pch = path;
+        while(pch!=NULL) {
+                char *next = strchr(pch,':');
+                int len = (next == NULL) ? strlen(pch) : next-pch;
+
+		if(len == 0) {
+			break;
+		}
+
+                pch[len] = '\0';
+		sprintf(find_file_name_path, "%s/%s", pch, filename);
+		pch[len] = ':';
+
+		if((fp = fopen(find_file_name_path, "rb")) != 0) {
+			printf("using(p) %s\r\n", find_file_name_path);
+			return fp;
+		}
+
+                pch = next;
+                if(pch) {
+                        pch++;
+                }
+        }
+
+	return 0;
+}
+
 static void store_image_from_file(char *filename, uint8_t wait_for_int)
 {
 	long remaining_bytes;
@@ -591,7 +641,8 @@ static void store_image_from_file(char *filename, uint8_t wait_for_int)
 	size_t result;
 	char buf[4];
 
-	fp = fopen(filename, "rb");
+//	fp = fopen(filename, "rb");
+	fp = find_file_name(filename);
 	if(fp == NULL){
 		printf("file error %s\r\n",filename);
 		return;
