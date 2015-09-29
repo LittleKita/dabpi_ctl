@@ -27,6 +27,12 @@ modprobe snd-bcm2835
 
 ### Using with device tree:
 
+/boot/config.txt:
+```
+dtoverlay=spi-bcm2708
+dtparam=spi=on
+```
+
 ```
 insmod si468x/snd-soc-si468x.ko
 insmod rpi-dabpi/snd-soc-rpi-dabpi.ko cpu_dai_name=`basename $(find /sys -name "*.i2s" -type d)`
